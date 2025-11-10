@@ -8,11 +8,10 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QH
                              QFileDialog, QLabel, QMessageBox, QDialog, QDialogButtonBox,
                              QSpacerItem, QSizePolicy, QStackedWidget)
 from PyQt5.QtCore import Qt, QSize, QPoint, QBuffer, QIODevice
-# Imports corrigidos (QIcon adicionado)
 from PyQt5.QtGui import QPixmap, QIcon, QPainter, QPen, QImage
 from io import BytesIO 
 
-# --- Estilos de Tema (Tema 'light' corrigido) ---
+# Estilos de Tema
 STYLESHEET = {
     'dark': """
         QWidget { background-color: #2b2b2b; color: #f0f0f0; }
@@ -38,7 +37,7 @@ STYLESHEET = {
     """
 }
 
-# --- 1. Arquitetura do Modelo (a mesma) ---
+# Arquitetura do Modelo
 class Perceptron(nn.Module):
     def __init__(self):
         super().__init__()
@@ -47,7 +46,7 @@ class Perceptron(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-# --- 2. Carregar o Modelo Campeão (v5.0) ---
+# Carregar o Modelo (v5.0)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = Perceptron().to(device)
 
@@ -61,11 +60,11 @@ except FileNotFoundError:
     
 model.eval() 
 
-# --- 3. Otimizador e Custo (para feedback) ---
+# Otimizador e Custo (feedback)
 optimizer = optim.SGD(model.parameters(), lr=0.01) 
 criterion = nn.BCEWithLogitsLoss() 
 
-# --- 4. Transformações da Imagem (a mesma) ---
+# Transformações da Imagem
 data_transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=1), 
     transforms.Resize((28, 28)),                 
@@ -74,7 +73,7 @@ data_transform = transforms.Compose([
     transforms.Lambda(lambda x: x.view(-1)) 
 ])
 
-# --- 5. Janela de Feedback (a mesma) ---
+# Janela de Feedback
 class FeedbackDialog(QDialog):
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
@@ -103,7 +102,7 @@ class FeedbackDialog(QDialog):
         self.feedback = 'errado'
         self.accept()
 
-# --- 6. Página de Desenho (a mesma) ---
+# Página de Desenho
 class DrawingPage(QWidget):
     def __init__(self, parent_app):
         super().__init__()
@@ -188,7 +187,7 @@ class DrawingPage(QWidget):
         except Exception as e:
             QMessageBox.critical(self, 'Erro', f'Não foi possível processar o desenho: {e}')
 
-# --- 7. Página Inicial (a mesma) ---
+# Página Inicial
 class HomePage(QWidget):
     def __init__(self, parent_app):
         super().__init__()
@@ -277,15 +276,12 @@ class HomePage(QWidget):
             self.parent_app.run_test(self.image_tensor)
         self.reset_ui() 
 
-# --- 8. Janela Principal (Controladora) ---
+# Janela Principal
 class App(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Reconhecedor da Letra A (v6.0 - Final)')
-        # --- NOVO: Adiciona o ícone da janela ---
-        # Certifique-se de que o arquivo 'logo_a.ico' está na mesma pasta
         self.setWindowIcon(QIcon('logo_a.ico'))
-        # --- FIM DA NOVIDADE ---
         self.resize(500, 400) 
         self.current_theme = 'light'
         
@@ -293,8 +289,8 @@ class App(QWidget):
         self.home_page = HomePage(self)
         self.drawing_page = DrawingPage(self)
         
-        self.stack.addWidget(self.home_page)     # Índice 0
-        self.stack.addWidget(self.drawing_page)  # Índice 1
+        self.stack.addWidget(self.home_page)     
+        self.stack.addWidget(self.drawing_page)
         
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
@@ -325,7 +321,7 @@ class App(QWidget):
             self.drawing_page.btn_theme.setText("🌙")
         self.apply_theme()
 
-    # --- FUNÇÃO CENTRAL DE TESTE ---
+    # FUNÇÃO CENTRAL
     def run_test(self, image_tensor_to_test):
         try:
             with torch.no_grad():
@@ -351,7 +347,7 @@ class App(QWidget):
         except Exception as e:
             QMessageBox.critical(self, 'Erro', f'Falha no teste: {e}')
 
-    # --- Função de Aprendizado (Corrigida) ---
+    # Função de Aprendizado
     def aprender_com_feedback(self, image_tensor, label_correta):
         print("Aprendendo com o feedback do usuário...")
         
@@ -371,7 +367,7 @@ class App(QWidget):
         except Exception as e:
             QMessageBox.warning(self, 'Erro', f'Não foi possível salvar o modelo: {e}')
 
-# --- 9. Executar a Aplicação ---
+# Executar a Aplicação
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = App()

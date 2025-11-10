@@ -5,7 +5,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from sklearn.metrics import classification_report, accuracy_score
 
-# 1. Configura o dispositivo (CPU ou GPU)
+# Configura o dispositivo (CPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Usando dispositivo: {device}")
 
@@ -40,14 +40,13 @@ class Perceptron(nn.Module):
 model = Perceptron().to(device)
 
 # --- CORREÇÃO DO DESEQUILÍBRIO (v5.0) ---
-# Vamos tentar um valor menor que 8 para aumentar a precisão.
 pos_weight = torch.tensor([4.0]).to(device) 
 
 criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight) 
 optimizer = optim.SGD(model.parameters(), lr=0.1)
 
 print("Iniciando o treinamento (v5.0 - Mais Calmo)...")
-for epoch in range(30): # 30 épocas
+for epoch in range(30):
     model.train()
     total_loss = 0
     for images, labels in train_loader:
