@@ -15,7 +15,7 @@
 
 ## Download
 <p align=>
-  <strong>Código-Fonte:</strong> <a href="[https://github.com/SEU-USUARIO/SEU-REPOSITORIO/archive/refs/heads/main.zip](https://github.com/boosa515/Reconhecedor-Letra-A---Perceptron/archive/refs/heads/main.zip)"><strong>Clique Aqui (ZIP)</strong></a>
+  <strong>Código-Fonte:</strong> <a href="https://github.com/SEU-USUARIO/SEU-REPOSITORIO/archive/refs/heads/main.zip](https://github.com/boosa515/Reconhecedor-Letra-A---Perceptron/archive/refs/heads/main.zip"><strong>Clique Aqui (ZIP)</strong></a>
 </p>
 <br/>
 
