@@ -4,14 +4,17 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import transforms
 from PIL import Image
+# Imports de QWidget e Layouts
 from PyQt5.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, 
                              QFileDialog, QLabel, QMessageBox, QDialog, QDialogButtonBox,
-                             QSpacerItem, QSizePolicy, QStackedWidget)
-from PyQt5.QtCore import Qt, QSize, QPoint, QBuffer, QIODevice
+                             QStackedWidget)
+# Imports de QGeral e QGraficos
+from PyQt5.QtCore import Qt, QPoint, QBuffer, QIODevice
 from PyQt5.QtGui import QPixmap, QIcon, QPainter, QPen, QImage
+# Import para conversão de imagem em memória
 from io import BytesIO 
 
-# Estilos de Tema
+# --- Estilos de Tema ---
 STYLESHEET = {
     'dark': """
         QWidget { background-color: #2b2b2b; color: #f0f0f0; }
@@ -37,7 +40,7 @@ STYLESHEET = {
     """
 }
 
-# Arquitetura do Modelo
+# --- 1. Arquitetura do Modelo ---
 class Perceptron(nn.Module):
     def __init__(self):
         super().__init__()
@@ -46,7 +49,7 @@ class Perceptron(nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-# Carregar o Modelo (v5.0)
+# --- 2. Carregar o Modelo Campeão (v5.0) ---
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = Perceptron().to(device)
 
@@ -58,23 +61,24 @@ except FileNotFoundError:
     print("Por favor, rode o script 'treinar_modelo.py' (v5.0) primeiro.")
     sys.exit()
     
-model.eval() 
+model.eval() # Modo de avaliação
 
-# Otimizador e Custo (feedback)
+# --- 3. Otimizador e Custo (para feedback) ---
 optimizer = optim.SGD(model.parameters(), lr=0.01) 
 criterion = nn.BCEWithLogitsLoss() 
 
-# Transformações da Imagem
+# --- 4. Transformações da Imagem ---
 data_transform = transforms.Compose([
     transforms.Grayscale(num_output_channels=1), 
     transforms.Resize((28, 28)),                 
     transforms.ToTensor(),                       
-    transforms.Lambda(lambda x: 1.0 - x), 
-    transforms.Lambda(lambda x: x.view(-1)) 
+    transforms.Lambda(lambda x: 1.0 - x), # Inverte (letra preta/fundo branco -> letra branca/fundo preto)
+    transforms.Lambda(lambda x: x.view(-1)) # Achata
 ])
 
-# Janela de Feedback
+# --- 5. Janela de Feedback ---
 class FeedbackDialog(QDialog):
+    # (Esta classe não precisou de mudanças, está limpa)
     def __init__(self, title, message, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -102,8 +106,9 @@ class FeedbackDialog(QDialog):
         self.feedback = 'errado'
         self.accept()
 
-# Página de Desenho
+# --- 6. Página de Desenho ---
 class DrawingPage(QWidget):
+    # (Esta classe não precisou de mudanças, está limpa)
     def __init__(self, parent_app):
         super().__init__()
         self.parent_app = parent_app 
@@ -183,11 +188,13 @@ class DrawingPage(QWidget):
         
         try:
             image_tensor = data_transform(pil_img).unsqueeze(0).to(device)
+            # Chama a função de teste da janela principal
+            # O teste acontece, a janela de feedback aparece, mas esta tela NÃO fecha.
             self.parent_app.run_test(image_tensor) 
         except Exception as e:
             QMessageBox.critical(self, 'Erro', f'Não foi possível processar o desenho: {e}')
 
-# Página Inicial
+# --- 7. Página Inicial (com lógica do botão simplificada) ---
 class HomePage(QWidget):
     def __init__(self, parent_app):
         super().__init__()
@@ -199,7 +206,7 @@ class HomePage(QWidget):
         self.btn_clear = QPushButton("Limpar Imagem")
         self.btn_clear.clicked.connect(self.reset_ui)
         self.btn_clear.setFixedWidth(130)
-        self.btn_clear.setVisible(False) 
+        self.btn_clear.setVisible(False) # Começa escondido
         
         self.btn_theme = QPushButton("🌙") 
         self.btn_theme.clicked.connect(self.parent_app.toggle_theme) 
@@ -221,12 +228,17 @@ class HomePage(QWidget):
         # Layout dos Botões
         button_layout = QHBoxLayout()
         button_layout.addStretch() 
+        
+        # --- LÓGICA SIMPLIFICADA ---
+        # Este botão agora usa uma única função de clique
         self.btn_action = QPushButton('Procurar Imagem...', self)
-        self.btn_action.clicked.connect(self.on_procurar_click)
+        self.btn_action.clicked.connect(self.on_action_click) # Conecta a uma única função
         self.btn_action.setMinimumHeight(40)
+        
         self.btn_draw = QPushButton('Desenhar...', self)
         self.btn_draw.clicked.connect(self.parent_app.switch_to_drawing) 
         self.btn_draw.setMinimumHeight(40)
+        
         button_layout.addWidget(self.btn_action)
         button_layout.addWidget(self.btn_draw)
         button_layout.addStretch() 
@@ -241,57 +253,70 @@ class HomePage(QWidget):
         self.setLayout(main_layout)
 
     def reset_ui(self):
+        """Reseta a interface para o estado inicial."""
         self.image_tensor = None
         self.image_label.setText('Nenhuma imagem carregada.')
         self.image_label.setPixmap(QPixmap())
         self.btn_action.setText('Procurar Imagem...')
         self.btn_clear.setVisible(False) 
-        try:
-            self.btn_action.clicked.disconnect(self.on_testar_click)
-        except TypeError:
-            pass 
-        self.btn_action.clicked.connect(self.on_procurar_click)
 
-    def on_procurar_click(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Imagem", "", 
-                                                  "Imagens (*.png *.jpg *.jpeg *.bmp)")
-        if file_path:
-            try:
-                image = Image.open(file_path)
-                self.image_tensor = data_transform(image).unsqueeze(0).to(device)
-                pixmap = QPixmap(file_path)
-                self.image_label.setPixmap(pixmap.scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation))
-                
-                self.btn_action.setText('Testar Imagem')
-                self.btn_action.clicked.disconnect(self.on_procurar_click)
-                self.btn_action.clicked.connect(self.on_testar_click)
-                self.btn_clear.setVisible(True) 
-                
-            except Exception as e:
-                QMessageBox.critical(self, 'Erro', f'Não foi possível processar a imagem: {e}')
-                self.reset_ui()
-    
-    def on_testar_click(self):
-        if self.image_tensor is not None:
-            self.parent_app.run_test(self.image_tensor)
-        self.reset_ui() 
+    def on_action_click(self):
+        """
+        Esta ÚNICA função lida com "Procurar Imagem" e "Testar Imagem",
+        verificando o texto do botão para decidir o que fazer.
+        """
+        if self.btn_action.text() == 'Procurar Imagem...':
+            # --- Modo: Procurar Imagem ---
+            file_path, _ = QFileDialog.getOpenFileName(self, "Selecionar Imagem", "", 
+                                                      "Imagens (*.png *.jpg *.jpeg *.bmp)")
+            if file_path:
+                try:
+                    image = Image.open(file_path)
+                    self.image_tensor = data_transform(image).unsqueeze(0).to(device)
+                    pixmap = QPixmap(file_path)
+                    self.image_label.setPixmap(pixmap.scaled(128, 128, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+                    
+                    # Muda o estado do botão
+                    self.btn_action.setText('Testar Imagem')
+                    self.btn_clear.setVisible(True) 
+                    
+                except Exception as e:
+                    QMessageBox.critical(self, 'Erro', f'Não foi possível processar a imagem: {e}')
+                    self.reset_ui()
+        
+        else:
+            # --- Modo: Testar Imagem ---
+            if self.image_tensor is not None:
+                self.parent_app.run_test(self.image_tensor)
+            self.reset_ui() # Reseta a UI depois do teste
 
-# Janela Principal
+# --- 8. Janela Principal (Controladora) ---
 class App(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Reconhecedor da Letra A (v6.0 - Final)')
-        self.setWindowIcon(QIcon('logo_a.ico'))
+        self.setWindowTitle('Reconhecedor da Letra A (v5.0 - Final)')
+        
+        # Define o ícone da janela
+        try:
+            self.setWindowIcon(QIcon('logo_a.ico'))
+        except Exception as e:
+            print(f"Aviso: Não foi possível carregar 'logo_a.ico'. {e}")
+
         self.resize(500, 400) 
         self.current_theme = 'light'
         
+        # A "pilha" de telas
         self.stack = QStackedWidget()
+        
+        # Cria as duas páginas
         self.home_page = HomePage(self)
         self.drawing_page = DrawingPage(self)
         
-        self.stack.addWidget(self.home_page)     
-        self.stack.addWidget(self.drawing_page)
+        # Adiciona as páginas à pilha
+        self.stack.addWidget(self.home_page)     # Índice 0
+        self.stack.addWidget(self.drawing_page)  # Índice 1
         
+        # O layout principal só contém a pilha
         layout = QVBoxLayout()
         layout.setContentsMargins(0,0,0,0)
         layout.addWidget(self.stack)
@@ -301,13 +326,15 @@ class App(QWidget):
         self.show()
 
     def switch_to_home(self):
-        self.stack.setCurrentIndex(0) 
+        self.stack.setCurrentIndex(0) # Vai para a Página Inicial
 
     def switch_to_drawing(self):
-        self.stack.setCurrentIndex(1) 
+        self.stack.setCurrentIndex(1) # Vai para a Página de Desenho
 
     def apply_theme(self):
         self.setStyleSheet(STYLESHEET[self.current_theme])
+        # Garante que o tema seja aplicado em ambas as páginas
+        self.home_page.setStyleSheet(STYLESHEET[self.current_theme])
         self.drawing_page.setStyleSheet(STYLESHEET[self.current_theme])
 
     def toggle_theme(self):
@@ -321,8 +348,9 @@ class App(QWidget):
             self.drawing_page.btn_theme.setText("🌙")
         self.apply_theme()
 
-    # FUNÇÃO CENTRAL
+    # --- FUNÇÃO CENTRAL DE TESTE ---
     def run_test(self, image_tensor_to_test):
+        """Executa o teste, mostra o feedback e decide se deve aprender."""
         try:
             with torch.no_grad():
                 output_raw = model(image_tensor_to_test).squeeze()
@@ -340,34 +368,46 @@ class App(QWidget):
             dialog.setStyleSheet(STYLESHEET[self.current_theme])
             dialog.exec_() 
             
+            # --- LÓGICA DE APRENDIZADO ATUALIZADA ---
             if dialog.feedback == 'errado':
+                # O usuário corrigiu o modelo
                 label_correta = 1.0 if not predicao_modelo else 0.0 
-                self.aprender_com_feedback(image_tensor_to_test, label_correta)
+                self.aprender_com_feedback(image_tensor_to_test, label_correta, show_thank_you=True)
+            
+            elif dialog.feedback == 'certo':
+                # O usuário confirmou o acerto, vamos reforçar
+                label_correta = 1.0 if predicao_modelo else 0.0
+                self.aprender_com_feedback(image_tensor_to_test, label_correta, show_thank_you=False)
             
         except Exception as e:
             QMessageBox.critical(self, 'Erro', f'Falha no teste: {e}')
 
-    # Função de Aprendizado
-    def aprender_com_feedback(self, image_tensor, label_correta):
-        print("Aprendendo com o feedback do usuário...")
+    # --- Função de Aprendizado (com mensagem condicional) ---
+    def aprender_com_feedback(self, image_tensor, label_correta, show_thank_you=False):
+        """Treina o modelo com a imagem de feedback e salva."""
+        print(f"Aprendendo com feedback... Label Correto: {label_correta}")
         
-        model.train() 
+        model.train() # Coloca em modo de treino
         optimizer.zero_grad()
         label_tensor = torch.tensor(label_correta).float().to(device)
         output = model(image_tensor).squeeze()
         loss = criterion(output, label_tensor)
         loss.backward()
         optimizer.step()
-        model.eval() 
+        model.eval() # Volta ao modo de avaliação
         
         try:
             torch.save(model.state_dict(), MODEL_FILE)
-            QMessageBox.information(self, 'Aprendizado', 
-                f'Obrigado! O modelo foi atualizado e salvo em\n{MODEL_FILE}')
+            
+            # Mostra a mensagem de agradecimento APENAS se foi uma correção
+            if show_thank_you:
+                QMessageBox.information(self, 'Aprendizado', 
+                    f'Obrigado! O modelo foi atualizado e salvo em\n{MODEL_FILE}')
+                
         except Exception as e:
             QMessageBox.warning(self, 'Erro', f'Não foi possível salvar o modelo: {e}')
 
-# Executar a Aplicação
+# --- 9. Executar a Aplicação ---
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = App()
